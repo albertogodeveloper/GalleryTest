@@ -1,0 +1,55 @@
+import {Injectable, NgZone, Renderer2, RendererFactory2, RendererStyleFlags2} from '@angular/core';
+import {CanDeactivate} from "@angular/router";
+
+const importantFlag = RendererStyleFlags2.Important
+
+@Injectable()
+export class GalleryWindowScrollingService implements CanDeactivate<any> {
+
+  private renderer: Renderer2;
+  private isActiveScroll: boolean;
+
+  constructor(
+    private rendererFactory: RendererFactory2,
+    private zone: NgZone
+  ) {
+    this.renderer = rendererFactory.createRenderer(null, null);
+    this.isActiveScroll = true;
+  }
+
+
+  /* PUBLIC METHODS */
+
+  /* disable scrolling on html. Called from (previewOpen) */
+  public disable(): void {
+    if (this.isActiveScroll) {
+      this.renderer.setStyle(document.querySelector('html'), 'overflow', 'hidden', importantFlag);
+      this.isActiveScroll = false;
+    }
+  }
+
+  /* enable scrolling on html Called from (previewClose)*/
+  public enable(): void {
+    if (!this.isActiveScroll) {
+      this.renderer.removeStyle(document.querySelector('html'), 'overflow');
+      this.isActiveScroll = true;
+    }
+  }
+
+  // It does not allow to go back if the gallery preview is open (scroll disabled).
+  canDeactivate(target: any) {
+    if (this.isActiveScroll) {
+      return true;
+    } else {
+      this.zone.runOutsideAngular(() => setTimeout(() => {
+        let elements = document.querySelectorAll('.ngx-gallery-close');
+        elements.forEach(element => {
+          element.parentNode.dispatchEvent(new MouseEvent('click'))
+        })
+        return false
+      }, 0));
+      history.pushState(null, null, location.href);
+    }
+
+  }
+}
